@@ -1,0 +1,116 @@
+# --- Python ---
+# Виртуальные окружения
+venv/
+env/
+.venv/
+.env/
+*/venv/
+*/env/
+*/.venv/
+*/.env/
+
+# Python кэш и скомпилированные файлы
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Файлы дистрибутивов / установки
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.manifest
+*.spec
+
+# Логи установки Pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Артефакты тестирования
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# --- Конфигурация и Секреты (ОЧЕНЬ ВАЖНО!) ---
+# Никогда не добавляйте файлы с токенами, API ключами и другими секретами в Git!
+# Используйте переменные окружения или отдельные, игнорируемые файлы конфигурации.
+*.env
+.env*
+config.ini
+config.json
+config.yaml
+settings.py # Если это ваш основной файл настроек с секретами
+*.sqlite3 # Локальные базы данных SQLite
+*.db
+*.db-journal # Журналы SQLite
+*.log # Лог-файлы
+secrets.py # Типичное имя для файла с секретами
+
+# Пример файла конфигурации (можно добавить в репозиторий)
+# config.example.ini
+# .env.example
+
+# --- Файлы сессий Telegram библиотек (например, Pyrogram, Telethon) ---
+*.session
+*.session-journal
+
+# --- Файлы IDE / Редакторов ---
+# PyCharm
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+#*#
+.*.swp
+
+# --- Файлы операционной системы ---
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Прочее ---
+# Временные файлы или папки для загрузок/обработки
+temp/
+tmp/
+cache/
+downloads/ # Если бот скачивает файлы временно
