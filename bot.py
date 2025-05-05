@@ -24,6 +24,14 @@ if not API_URL:
 bot = telebot.TeleBot(BOT_TOKEN)
 print("Bot initialized successfully.") # Добавим сообщение для логов
 
+@bot.message_handler(commands=['start'])
+
+def start_handler(message):
+
+    print(f"🆔 Chat ID нового користувача: {message.chat.id}")
+
+    bot.reply_to(message, f"Ваш chat_id: {message.chat.id}")
+
 # --- ДОБАВЬ ЭТОТ ОБРАБОТЧИК СЮДА ---
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
