@@ -33,7 +33,7 @@ def handle_callback(call):
             return
 
         # надсилаємо на бекенд
-        requests.post("http://178.253.23.12:5000/set-response", json={
+        requests.post("https://api.bestballerinarvote.com/user-request", json={
             "phone": phone,
             "result": status
         })
