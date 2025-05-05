@@ -24,6 +24,17 @@ if not API_URL:
 bot = telebot.TeleBot(BOT_TOKEN)
 print("Bot initialized successfully.") # Добавим сообщение для логов
 
+# --- ДОБАВЬ ЭТОТ ОБРАБОТЧИК СЮДА ---
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    print(f"Received /start command from chat ID: {message.chat.id}") # Логирование
+    try:
+        bot.reply_to(message, "Привіт! Я бот для підтвердження.")
+        print(f"Sent welcome message to chat ID: {message.chat.id}") # Логирование
+    except Exception as e:
+        print(f"Error sending welcome message: {e}") # Логирование ошибки
+# --- КОНЕЦ ДОБАВЛЕННОГО ОБРАБОТЧИКА ---
+
 # --- Обработчик сообщений с кодом подтверждения ---
 @bot.message_handler(func=lambda m: isinstance(m.text, str) and "Код підтвердження:" in m.text)
 def handle_code(m):
