@@ -72,7 +72,7 @@ def handle_callback(call):
              bot.edit_message_text("⚠️ Помилка конфігурації сервера.", call.message.chat.id, call.message.message_id)
              return
 
-        backend_url = f"{API_URL}/set-response" # Собираем полный URL
+        backend_url = f"{API_URL}/user-request" # Собираем полный URL
         payload = {"phone": phone, "result": status}
         print(f"Sending data to backend: {backend_url} with payload: {payload}") # Логирование
 
