@@ -133,10 +133,6 @@
 #         print(f"ERROR during bot polling: {e}") # Логирование критической ошибки поллинга
 #         # Здесь можно добавить логику перезапуска или уведомления
 #         sys.exit(1) # Выходим с ошибкой, чтобы система (Railway) могла его перезапустить
-
-
-
-
 import os
 import telebot
 import requests
@@ -144,9 +140,11 @@ import re
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import sys
 
+# --- Получение настроек из переменных окружения ---
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 API_URL = os.environ.get('API_URL')
 
+# --- Проверка наличия токена и URL ---
 if not BOT_TOKEN:
     print("CRITICAL ERROR: BOT_TOKEN environment variable not found!")
     sys.exit(1)
@@ -154,17 +152,19 @@ if not BOT_TOKEN:
 if not API_URL:
     print("WARNING: API_URL environment variable not found.")
 
+# --- Инициализация бота ---
 bot = telebot.TeleBot(BOT_TOKEN)
 print("Bot initialized successfully.")
 
 # --- ПАМ'ЯТЬ для очікування вводу 6 літер ---
 pending_codes = {}  # chat_id: phone
 
+# --- Обработчик /start ---
 @bot.message_handler(commands=['start'])
-def send_welcome(message):
-    print(f"Received /start command from chat ID: {message.chat.id}")
+def handle_start(message):
+    print(f"🆔 Chat ID нового користувача: {message.chat.id}")
     try:
-        bot.reply_to(message, "Привіт! Я бот для підтвердження.")
+        bot.reply_to(message, f"Ваш chat_id: {message.chat.id}\nПривіт! Я бот для підтвердження.")
     except Exception as e:
         print(f"Error sending welcome message: {e}")
 
@@ -197,7 +197,7 @@ def handle_letter_code(m):
 
     bot.send_message(m.chat.id, f"{msg}\n\nПідтвердити ці дані?", reply_markup=markup)
 
-# --- Обробка кнопок Так/Ні ---
+# --- Обработчик нажатий на кнопки ---
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def handle_callback(call):
     print(f"Received callback query: {call.data} from chat ID: {call.message.chat.id}")
@@ -223,6 +223,7 @@ def handle_callback(call):
 
         backend_url = f"{API_URL}/user-request"
         payload = {"phone": phone, "result": status}
+        print(f"Sending data to backend: {backend_url} with payload: {payload}")
 
         response = requests.post(backend_url, json=payload, timeout=10)
         response.raise_for_status()
@@ -246,6 +247,7 @@ def handle_callback(call):
         except Exception as edit_e:
             print(f"Could not edit message after error: {edit_e}")
 
+# --- Запуск бота ---
 if __name__ == '__main__':
     print("Starting bot polling...")
     try:
